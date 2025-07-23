@@ -2140,6 +2140,12 @@ class KernelWriterAssembly(KernelWriter):
       labelMultiGemmEnd = Label(label="MultiGemmEnd", comment="")
       module.add(moduleArgs)
       module.add(moduleRegInit)
+      # @Siavash
+      if self.debugConfig.debugKernel:
+        module.add(SMovB32(dst=sgpr("TmpWorkGroup0BeforeWGM"), src=sgpr("WorkGroup0")))
+        module.add(SMovB32(dst=sgpr("TmpWorkGroup1BeforeWGM"), src=sgpr("WorkGroup1")))
+        module.add(SMovB32(dst=sgpr("TmpOriginalWGM"), src=sgpr("WGM")))
+
       if not kernel["UseGeneralWGM"]:
         module.add(self.wgmXCC(kernel, tmpSgprNumWorkGroups))
       self.sgprPool.checkIn(tmpSgprNumWorkGroups)
@@ -10955,6 +10961,8 @@ class KernelWriterAssembly(KernelWriter):
 
     noGSUBranch = (kernel["GlobalSplitU"] == 0)
     module = Module("notLocalSplitUGlobalWrite")
+    # @Siavash
+    module.addComment1("@Siavash Blah")
     module.add(self.globalWriteElements(kernel, tPA, tPB, vectorWidths, vectorWidths_1, elements, elements_1, noGSUBranch=noGSUBranch))
 
     self.cleanupGlobalWrite(kernel)
@@ -12684,6 +12692,16 @@ class KernelWriterAssembly(KernelWriter):
               addr0, addr1, globalOffset, soffset=wsOffset, \
               glc=isGlc, slc=isSlc, nt=isNT, hi16=0, comment=comment))
       elif dataType.isInt32() or dataType.isSingle():
+        # @Siavash
+        # v_mov_b32 v[20], s[sgprTmpWorkGroup0BeforeWGM]    // Original M
+        # v_mov_b32 v[21], s[sgprWorkGroup0]                // NewM (vertical - M number of row) newN (horizontal - N number of columns)
+        # v_mov_b32 v[22], s[sgprTmpXCC]                    // XCC
+        # v_mov_b32 v[23], s[sgprTmpOriginalWGM] 
+        module.add(VMovB32(vgpr(sumIdx+0), sgpr("TmpWorkGroup0BeforeWGM"),comment="@Siavash"))
+        module.add(VMovB32(vgpr(sumIdx+1), sgpr("WorkGroup0"),comment="@Siavash"))
+        module.add(VMovB32(vgpr(sumIdx+2), sgpr("TmpXCC"),comment="@Siavash"))
+        module.add(VMovB32(vgpr(sumIdx+3), sgpr("TmpOriginalWGM"),comment="@Siavash"))
+
         module.add(self.chooseGlobalWrite(useBuffer, bps, sumIdx, rpv, \
             addr0, addr1, globalOffset, soffset=wsOffset, \
             glc=isGlc, slc=isSlc, nt=isNT, comment=comment))

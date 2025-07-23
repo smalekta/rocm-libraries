@@ -470,6 +470,9 @@ namespace TensileLite
                      T const*                ptrValue  = nullptr,
                      bool                    decorated = true)
     {
+        stream << "@Siavash inside TensorDescriptor.hpp:473" << std::endl;
+
+
         stream << "Tensor(";
         streamJoin(stream, desc.sizes(), ", ");
         stream << ", data_ptr: " << data << ")" << std::endl;
@@ -515,6 +518,76 @@ namespace TensileLite
                 for(coord[0] = 1; coord[0] < sizes[0]; coord[0]++)
                 {
                     stream << " " << localPtr[coord[0] * stride0];
+                }
+
+                stream << std::endl;
+            }
+
+            if(decorated)
+            {
+                stream << std::endl << "]" << std::endl;
+            }
+        }
+    }
+
+    template <>
+    inline void WriteTensor(std::ostream&           stream,
+                     float const*                data,
+                     TensorDescriptor const& desc,
+                     float const*                ptrValue,
+                     bool                    decorated)
+    {
+
+        stream << "@Siavash inside TensorDescriptor.hpp:541" << std::endl;
+
+        stream << "Tensor(";
+        streamJoin(stream, desc.sizes(), ", ");
+        stream << ", data_ptr: " << data << ")" << std::endl;
+
+        if(desc.dimensions() == 0)
+            return;
+
+        if(desc.dimensions() == 1)
+        {
+            WriteTensor1D(stream, data, desc, decorated);
+            return;
+        }
+
+        auto const&         sizes = desc.sizes();
+        std::vector<size_t> coord(desc.dimensions(), 0);
+        const auto          stride0 = desc.strides()[0];
+
+        auto upperDimCount = CoordCount(sizes.begin() + 2, sizes.end());
+
+        for(size_t idx = 0; idx < upperDimCount; idx++)
+        {
+            CoordNumbered(idx, coord.begin() + 2, coord.end(), sizes.begin() + 2, sizes.end());
+
+            coord[0] = 0;
+            coord[1] = 0;
+
+            if(decorated)
+            {
+                stream << "(";
+                streamJoin(stream, coord, ", ");
+                stream << ")" << std::endl << "[" << std::endl;
+            }
+
+            for(coord[1] = 0; coord[1] < sizes[1]; coord[1]++)
+            {
+                coord[0] = 0;
+
+                auto const* localPtr = data + desc.index(coord);
+
+                if(sizes[0] > 0)
+                {
+                    float v = localPtr[0];
+                    stream << " 0x" << std::hex << std::setfill('0') << std::setw(8) << *reinterpret_cast<int*>(&v);
+                }
+                for(coord[0] = 1; coord[0] < sizes[0]; coord[0]++)
+                {
+                    float v = localPtr[coord[0] * stride0];
+                    stream << " 0x" << std::hex << std::setfill('0') << std::setw(8)  << *reinterpret_cast<int*>(&v);
                 }
 
                 stream << std::endl;

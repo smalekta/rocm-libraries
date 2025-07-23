@@ -36,7 +36,7 @@ from rocisa.instruction import BufferLoadB128, BufferLoadB32, BufferLoadB64, \
   FlatLoadB64, FlatStoreB128, FlatStoreB32, FlatStoreB64, Instruction, \
   MFMAInstruction, SBarrier, SBranch, SCBranchSCC0, SCBranchSCC1, SCmpLeU32, \
   SMFMAInstruction, SNop, SSetPrior, SSetRegIMM32B32, SSubU32, SWaitCnt, SWaitAlu, \
-  SLongBranchPositive, VFmaMixF32, VMadMixF32, VMovB32
+  SLongBranchPositive, VFmaMixF32, VMadMixF32, VMovB32, SGetRegB32
 from rocisa.register import RegisterPool
 from rocisa.enum import RegisterType
 
@@ -3281,6 +3281,9 @@ class KernelWriter(metaclass=abc.ABCMeta):
 
       # LocalSplitU: global write
       module.addComment1("LocalSplitU: global write")
+      # @Siavash
+      if self.debugConfig.debugKernel:
+        module.add(SGetRegB32(dst=sgpr("TmpXCC"), src=HWRegContainer("HW_REG_XCC_ID", [])))
       module.add(lsuComponent.globalWrite(self, kernel, tensorParametersA, tensorParametersB))
 
     else:
@@ -3294,6 +3297,9 @@ class KernelWriter(metaclass=abc.ABCMeta):
 
       # global write
       module.addComment1("not-LocalSplitU: global write")
+      # Siavash
+      if self.debugConfig.debugKernel:
+        module.add(SGetRegB32(dst=sgpr("TmpXCC"), src=HWRegContainer("HW_REG_XCC_ID", [])))
       module.add(self.notLocalSplitUGlobalWrite(kernel, tensorParametersA, tensorParametersB))
 
     module.add(self.functionEnd(kernel, addLabel=True))
@@ -4727,6 +4733,14 @@ class KernelWriter(metaclass=abc.ABCMeta):
       self.defineSgpr("StreamKLocalEnd", 1)
       if kernel["StreamKAtomic"] == 0:
         self.defineSgpr("SrdWS", 4, 4)
+    
+    # @Siavash
+    if self.debugConfig.debugKernel:
+      self.defineSgpr("TmpWorkGroup0BeforeWGM", 1)
+      self.defineSgpr("TmpWorkGroup1BeforeWGM", 1)
+      self.defineSgpr("TmpXCC", 1)
+      self.defineSgpr("TmpOriginalWGM", 1)
+
 
     #------------------------
     # Registers defined below this point are not available in the post-loop

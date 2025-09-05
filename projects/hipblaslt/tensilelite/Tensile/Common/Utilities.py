@@ -48,7 +48,7 @@ def fastdeepcopy(x):
 # Global
 _global_ti = rocIsa.getInstance()
 
-_verbosity = 1
+_verbosity = 2
 
 def setVerbosity(v: int):
     global _verbosity

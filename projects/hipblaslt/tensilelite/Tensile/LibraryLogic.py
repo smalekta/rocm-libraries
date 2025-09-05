@@ -281,12 +281,16 @@ class LogicAnalyzer:
       self.solutionGroupMap.append({})
       for solutionIdx in range(0, len(solutionGroup)):
         solution = solutionGroup[solutionIdx]
-        if not solution in solutionsHash:
-          sIdx = len(self.solutions) # the one we are about to add
-          self.solutions.append(solution)
-          solutionsHash[solution] = sIdx
-        else:
-          sIdx = solutionsHash[solution]
+        # if not solution in solutionsHash:
+        #   sIdx = len(self.solutions) # the one we are about to add
+        #   self.solutions.append(solution)
+        #   solutionsHash[solution] = sIdx
+        # else:
+        #   sIdx = solutionsHash[solution]
+
+        sIdx = len(self.solutions) # the one we are about to add
+        self.solutions.append(solution)
+        solutionsHash[solution] = sIdx
 
         self.solutionGroupMap[solutionGroupIdx][solutionIdx] = sIdx
         progressBar.increment()
@@ -635,6 +639,10 @@ class LogicAnalyzer:
       winnerIdx = self.exactWinners[exactProblem][0]
       #print "keepWinnerSolution adding exact", exactProblem, winnerIdx
       winners.add(winnerIdx)
+
+    # import pdb
+    # pdb.set_trace()
+
 
     print("Winners", winners)
     self.pruneSolutions(winners)

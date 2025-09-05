@@ -47,7 +47,8 @@
 ---
 custom.config:
   InternalSupportParams:
-    KernArgsVersion: 2
+      KernArgsVersion: 2
+      SupportCustomWGM: True
   ProblemType:
       OperationType: GEMM
       DataType: b
@@ -67,9 +68,6 @@ custom.config:
   MIBlock: [16, 16, 32, 1, 1, 1]
   MatrixInstruction: [16, 16, 32, 1]
   WavefrontSize: 64
-  WorkGroupMapping: 16
-  WorkGroupMappingXCC: 2
-  WorkGroupMappingXCCGroup: -1
   StaggerU: 0
   EnableMatrixInstruction: True
   MIWaveGroup: [2, 2]

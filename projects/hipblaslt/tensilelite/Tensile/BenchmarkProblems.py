@@ -55,6 +55,8 @@ from Tensile.Common import HR, print1, print2, IsaInfo, IsaVersion, \
 from Tensile.Common.Architectures import isaToGfx, gfxToVariants
 from Tensile.Common.GlobalParameters import globalParameters, startTime
 
+from itertools import product
+
 
 def _generateForkedSolutions(problemType, constantParams, forkPermutations, assembler: Assembler, \
                             debugConfig: DebugConfig, isaInfoMap: Dict[IsaVersion, IsaInfo]):
@@ -148,40 +150,48 @@ def _generateCustomKernelSolutions(
         failOnMismatch,
         assembler: Assembler,
         debugConfig: DebugConfig,
-        isaInfoMap: Dict[str, IsaInfo]
+        isaInfoMap: Dict[str, IsaInfo],
+        forkPermutations
     ):
+    # import pdb
+    # pdb.set_trace()
+
     """Creates a list with a Solution object for each name in customKernel"""
     solutions = []
-    for kernelName in customKernels:
-        print1("# Processing custom kernel {}".format(kernelName))
-        solution = _getCustomKernelSolutionObj(kernelName, internalSupportParams, assembler, debugConfig, isaInfoMap)
-        # The ActivationType setting in YAML is meaningless in customKernel case.
-        # Therefore, we override the customKernel setting with the ActivationType value from ProblemType to avoid false alarms during subsequent problemType checks.
-        solution["ProblemType"]["ActivationType"] = problemType["ActivationType"]
-        if solution["ProblemType"] != problemType:
-            # Raise error if this kernel was specifically requested and problem type doesn't match
-            if failOnMismatch:
-                benchmarkSet = set([(k,tuple(v)) if type(v) is list else (k,v) \
-                        for k,v in problemType.items()])
-                customSet = set([(k,tuple(v)) if type(v) is list else (k,v) \
-                        for k,v in solution["ProblemType"].items()])
+    for i, forkPermutation in enumerate(forkPermutations):
+        for kernelName in customKernels:
+            print1("# Processing custom kernel {} (forked permutation {})".format(kernelName, i))
+            solution = _getCustomKernelSolutionObj(kernelName, internalSupportParams, assembler, debugConfig, isaInfoMap)
 
-                msg = "The problem type in the config file does not match " \
-                        "that of the custom kernel, {}.".format(kernelName) \
-                        + "\nDiffering parameters:\n" \
-                        + "\tConfig values:\n\t" \
-                        + str(sorted(benchmarkSet - (customSet & benchmarkSet))) \
-                        + "\n\tCustom kernel values:\n\t" \
-                        +  str(sorted(customSet - (customSet & benchmarkSet)))
-                printExit(msg)
+            for k,v in forkPermutation.items():
+                solution[k] = v
+            # The ActivationType setting in YAML is meaningless in customKernel case.
+            # Therefore, we override the customKernel setting with the ActivationType value from ProblemType to avoid false alarms during subsequent problemType checks.
+            solution["ProblemType"]["ActivationType"] = problemType["ActivationType"]
+            if solution["ProblemType"] != problemType:
+                # Raise error if this kernel was specifically requested and problem type doesn't match
+                if failOnMismatch:
+                    benchmarkSet = set([(k,tuple(v)) if type(v) is list else (k,v) \
+                            for k,v in problemType.items()])
+                    customSet = set([(k,tuple(v)) if type(v) is list else (k,v) \
+                            for k,v in solution["ProblemType"].items()])
+
+                    msg = "The problem type in the config file does not match " \
+                            "that of the custom kernel, {}.".format(kernelName) \
+                            + "\nDiffering parameters:\n" \
+                            + "\tConfig values:\n\t" \
+                            + str(sorted(benchmarkSet - (customSet & benchmarkSet))) \
+                            + "\n\tCustom kernel values:\n\t" \
+                            +  str(sorted(customSet - (customSet & benchmarkSet)))
+                    printExit(msg)
+                else:
+                    print1("# Rejected {}: Problem Type doesn't match".format(kernelName))
             else:
-                print1("# Rejected {}: Problem Type doesn't match".format(kernelName))
-        else:
-            print1("# Added {} to solutions".format(kernelName))
-            if solution["Valid"]:
-                solutions.append(solution)
-            elif debugConfig.printSolutionRejectionReason:
-                print1("rejecting solution " + str(solution))
+                print1("# Added {} to solutions".format(kernelName))
+                if solution["Valid"]:
+                    solutions.append(solution)
+                elif debugConfig.printSolutionRejectionReason:
+                    print1("rejecting solution " + str(solution))
 
     return solutions
 
@@ -399,7 +409,7 @@ def _benchmarkProblemType(problemTypeConfig, problemSizeGroupConfig, problemSize
             kcSolutions = _generateCustomKernelSolutions(benchmarkProcess.problemType, \
                     benchmarkStep.customKernels, benchmarkStep.internalSupportParams, \
                     not benchmarkStep.customKernelWildcard, asmToolchain.assembler, debugConfig, \
-                        isaInfoMap)
+                        isaInfoMap, forkPermutations)
 
             maxPossibleSolutions += len(kcSolutions)
             solutions = regSolutions + kcSolutions

@@ -1320,7 +1320,7 @@ void testing_matmul_with_bias(const Arguments& arg,
 
     bool    do_grouped_gemm = arg.grouped_gemm > 0;
     int32_t gemm_count      = std::max(1, arg.grouped_gemm);
-    int64_t rotating        = arg.rotating * 1024 * 1024;
+    int64_t rotating        = (int64_t)(arg.rotating) * 1024 * 1024;
 
     std::vector<int64_t> M(gemm_count), N(gemm_count), K(gemm_count), lda(gemm_count),
         ldb(gemm_count), ldc(gemm_count), ldd(gemm_count), lde(gemm_count);

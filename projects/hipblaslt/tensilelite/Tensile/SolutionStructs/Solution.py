@@ -2359,9 +2359,9 @@ class Solution(collections.abc.Mapping):
     # NoTailLoop parameter initialization.
     # If ASEM is multiple of DepthU TailLoop will not be used.
     # Unless kernel is Stream-K; Stream-K always requires TailLoop to handle work division.
-    state["NoTailLoop"] = False
-    if state["AssertSummationElementMultiple"] % state["DepthU"] == 0 and state["StreamK"] == 0:
-      state["NoTailLoop"] = True
+    # state["NoTailLoop"] = False
+    # if state["AssertSummationElementMultiple"] % state["DepthU"] == 0 and state["StreamK"] == 0:
+    #   state["NoTailLoop"] = True
 
     # Determine if we can load directly-to-Vgpr
     # need to check after state["LocalReadVectorWidth"] = -1 is resolved

@@ -1612,7 +1612,7 @@ class StreamKOff(StreamK):
         dividend = "SizesSum+%u" % loopIdx #sumSize = self.sumSize(kernel, loopIdx)
         divisor = kernel["DepthU"]
 
-        if kernel["NoTailLoop"] and kernel["AssertSummationElementMultiple"] % kernel["DepthU"] != 0:
+        if kernel["NoTailLoop"]:
             # round up SizesSum/DepthU for noTailLoop case
             module.add(SAddI32(dst=sgpr(quotient), src0=(divisor - 1), src1=sgpr(dividend), comment="round up SizeSum / DepthU" ))
             module.add(scalarStaticDivideAndRemainder(qReg=quotient, rReg=-1, dReg=quotient, divisor=divisor, tmpSgprRes=tmpSgprInfo, doRemainder=False))

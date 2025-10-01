@@ -3577,7 +3577,7 @@ class KernelWriterAssembly(KernelWriter):
               quotient = loopCounterName
               dividend = "SizesSum+%u"%self.states.unrollIdx
               divisor = kernel["DepthU"]
-              if kernel["NoTailLoop"] and kernel["AssertSummationElementMultiple"] % kernel["DepthU"] != 0:
+              if kernel["NoTailLoop"]:
                 # round up SizesSum/DepthU for noTailLoop case
                 module.add(SAddI32(dst=sgpr(quotient), src0=(divisor - 1), src1=sgpr(dividend), \
                     comment="round up SizeSum / DepthU" ))
@@ -7680,6 +7680,10 @@ class KernelWriterAssembly(KernelWriter):
       isGlc = bool(tP["NonTemporal"] & 0x1)
       isSlc = bool(tP["NonTemporal"] & 0x2)
       isNT  = bool(tP["NonTemporal"] & 0x4)
+
+      if tc == "B":
+        isNT = False
+
       isLds = True if (kernel["DirectToLds%s"%tc] and not kernel["NonDTLTailLoop%s"%tc]) else False
       isTr = (tc == "A" or tc == "B") and kernel["enableGLTr%s"%tc]
       is16b = dataType.isHalf() or dataType.isBFloat16()
@@ -8450,6 +8454,10 @@ class KernelWriterAssembly(KernelWriter):
       isGlc = bool(tP["NonTemporal"] & 0x1)
       isSlc = bool(tP["NonTemporal"] & 0x2)
       isNT  = bool(tP["NonTemporal"] & 0x4)
+
+      if self.states.inTailLoop and tc == "B":
+        isNT = False
+        
       isLds = True if kernel["DirectToLds%s"%tc] else False
       isTr = (tc == "A" or tc == "B") and kernel["enableGLTr%s"%tc]
 

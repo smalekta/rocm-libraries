@@ -507,7 +507,7 @@ namespace origami
 
         // Number of CUs that might share the same K-tiles, adjusted for K-splitting.
         // This affects contention on the L2 cache partitions (XCDs).
-        const size_t effective_cus = safe_ceil_div(concurrent_workgroups, splittingFactor);
+        const size_t effective_cus = concurrent_workgroups;
         const size_t cu_per_xcd    = std::max(safe_ceil_div(effective_cus, hardware.NUM_XCD), static_cast<size_t>(1));
 
         // Initial guess for the L2 tile dimensions (a tile of workgroups).
@@ -1067,7 +1067,7 @@ namespace origami
         // Zero Padding in the K dimension on last iteration
         if(K % MT_K != 0)
         {
-            double problem_k_quant = ((K % MT_K) / (double)K);
+            double problem_k_quant = (((K % MT_K)) / (double)K);
             L_epilogue
                 += problem_k_quant
                    * 50000; // Scale by remainder proportion of problem. 50k cycle penalty if have to zero pad all except 1.
@@ -1299,6 +1299,93 @@ namespace origami
             total_latency = total_latency * 10;
         }
 
+
+        size_t K_mod_128bytes    = K * safe_ceil_div(element_size_A, 8) % 128;
+        size_t MT_K_mod_128bytes = MT_K * safe_ceil_div(element_size_A, 8) % 128;
+
+        //Cache Sizes
+        size_t L1_cache_bytes = 64 * 1024; //64kB
+        size_t L2_cache_bytes = 4 * 1024 * 1024; //4MB
+        size_t A_tensor_bytes = M * K * element_size_A;
+        size_t B_tensor_bytes = N * K * element_size_B;
+        size_t A_k_complete_tile_bytes = MT_M * K * element_size_A;
+        size_t B_k_complete_tile_bytes = MT_N * K * element_size_B;
+
+        bool large_n_block_panel = (M >= 1 && M <= 1024 && N >= 8192 && N <= 1048576 && K >= 1
+                                    && K <= 1024 && batch == 1);
+        bool large_m_panel_block = (M >= 8192 && M <= 1048576 && N >= 1 && N <= 1024 && K >= 1
+                                    && K <= 1024 && batch == 1);
+
+        //We know we want to use non temporal B when B fits in L1
+
+        if(non_temporal_a || non_temporal_b)
+        {
+            total_latency = total_latency * 1.01;
+        }
+
+
+
+        if(batch == 1)
+        {
+        // if((A_tensor_bytes < L1_cache_bytes) && (B_tensor_bytes < L1_cache_bytes) && non_temporal_a && non_temporal_b)
+        // {
+        //     total_latency = total_latency *10;
+        // }
+        // else if((A_tensor_bytes < L1_cache_bytes) && (!(non_temporal_b==1)))
+        // {
+        //     total_latency = total_latency * 10;
+        // }
+
+        // //We know we want to use non temporal A when A fits in L1
+        // else if((B_tensor_bytes < L1_cache_bytes) && (!(non_temporal_a==1)))
+        // {
+        //     total_latency = total_latency * 10;
+        // }
+
+
+
+        // //We know we want to use non temporal B when B fits in L1
+        // else if((A_k_complete_tile_bytes < L1_cache_bytes) && !(non_temporal_b==1))
+        // {
+        //     total_latency = total_latency * 10;
+        // }
+
+        // //We know we want to use non temporal A when A fits in L1
+        // else if((B_k_complete_tile_bytes < L1_cache_bytes) && (!(non_temporal_a==1)))
+        // {
+        //     total_latency = total_latency * 10;
+        // }
+
+
+        if(K_mod_128bytes == 0 && MT_K_mod_128bytes == 0 && batch == 1)
+        {
+            if(M <= MT_M *2 && !transB && (B_tensor_bytes/A_tensor_bytes > 5))
+            {
+                //Use nontemporal B
+                if(!(non_temporal_b == 4))
+                {
+                    total_latency = total_latency * 10;
+                }
+            }
+            else if(N <= MT_N *2 && transA && (A_tensor_bytes/B_tensor_bytes > 5))
+            {
+                //Use Non Temporal A
+                if(!(non_temporal_a == 4))
+                {
+                    total_latency = total_latency * 10;
+                }
+            }
+
+            else
+            {
+                //Never use Non Temporal
+                if(non_temporal_a || non_temporal_b)
+                {
+                    total_latency = total_latency * 100;
+                }
+            }
+        }
+}
         // 3) Customized heuristics
         // TODO These are quantifying effects that don't work in the current math.
         // TODO THESE SHOULD BE TEMPORARY FIXES AND BE MORE SOLIDLY INTEGRATED LATER

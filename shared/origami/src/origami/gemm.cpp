@@ -1359,7 +1359,7 @@ namespace origami
 
         if(K_mod_128bytes == 0 && MT_K_mod_128bytes == 0 && batch == 1)
         {
-            if(M <= MT_M *2 && !transB && (B_tensor_bytes/A_tensor_bytes > 5))
+            if(M <= MT_M && !transB && (B_tensor_bytes/A_tensor_bytes > 5))
             {
                 //Use nontemporal B
                 if(!(non_temporal_b == 4))
@@ -1367,7 +1367,7 @@ namespace origami
                     total_latency = total_latency * 10;
                 }
             }
-            else if(N <= MT_N *2 && transA && (A_tensor_bytes/B_tensor_bytes > 5))
+            else if(N <= MT_N && transA && (A_tensor_bytes/B_tensor_bytes > 5))
             {
                 //Use Non Temporal A
                 if(!(non_temporal_a == 4))
